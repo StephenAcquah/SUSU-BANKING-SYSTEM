@@ -24,7 +24,7 @@ function openCashInModal(transactionId) {
     openModal('cashinModal');
 }
 
-function saveCashIn(e) {
+async function saveCashIn(e) {
     e.preventDefault();
     if (!requireAuth()) return;
     const id = document.getElementById('cashinEditId').value;
@@ -50,7 +50,7 @@ function saveCashIn(e) {
             showToast('Cash In updated.', 'success');
         }
     } else {
-        data.transactions.push({
+        const transaction = {
             id: genId(),
             date,
             type: 'cashIn',
@@ -60,8 +60,11 @@ function saveCashIn(e) {
             receivedBy: receivedBy || '—',
             issuedBy: '',
             createdAt: todayStr()
-        });
-        showToast(`Cash In of GH₵ ${amount.toFixed(2)} recorded.`, 'success');
+        };
+        if (cloudReady()) {
+            try { data.transactions.push(await cloudAddTransaction(transaction)); }
+            catch (error) { showToast(cloudError(error, 'Unable to record cash in.'), 'error'); return; }
+        } else data.transactions.push(transaction);
     }
 
     saveData();
@@ -71,7 +74,6 @@ function saveCashIn(e) {
 }
 
 function renderCashIn() {
-    const tbody = document.getElementById('cashinTableBody');
     if (!tbody) return;
     
     const filterDate = document.getElementById('cashinFilterDate')?.value || '';
@@ -104,7 +106,7 @@ function renderCashIn() {
         html += `
             <tr>
                 <td>${formatDate(t.date)}</td>
-                <td><strong>#${t.pbNumber}</strong></td>
+                <td><button class="link-button" onclick="showCustomerHistory(${t.customerId})" title="View customer transaction history">#${t.pbNumber}</button></td>
                 <td>${escapeHtml(getCustomerName(t.customerId))}</td>
                 <td class="text-success fw-600">GH₵ ${Number(t.amount).toFixed(2)}</td>
                 <td>${escapeHtml(t.receivedBy || '—')}</td>
@@ -155,7 +157,7 @@ function openCashOutModal(transactionId) {
     openModal('cashoutModal');
 }
 
-function saveCashOut(e) {
+async function saveCashOut(e) {
     e.preventDefault();
     if (!requireAuth()) return;
     const id = document.getElementById('cashoutEditId').value;
@@ -188,7 +190,7 @@ function saveCashOut(e) {
             showToast('Cash Out updated.', 'success');
         }
     } else {
-        data.transactions.push({
+        const transaction = {
             id: genId(),
             date,
             type: 'cashOut',
@@ -198,7 +200,11 @@ function saveCashOut(e) {
             receivedBy: '',
             issuedBy: issuedBy || '—',
             createdAt: todayStr()
-        });
+        };
+        if (cloudReady()) {
+            try { data.transactions.push(await cloudAddTransaction(transaction)); }
+            catch (error) { showToast(cloudError(error, 'Unable to record cash out.'), 'error'); return; }
+        } else data.transactions.push(transaction);
         showToast(`Cash Out of GH₵ ${amount.toFixed(2)} recorded.`, 'success');
     }
 
@@ -211,7 +217,6 @@ function saveCashOut(e) {
 function renderCashOut() {
     const tbody = document.getElementById('cashoutTableBody');
     if (!tbody) return;
-    
     const filterDate = document.getElementById('cashoutFilterDate')?.value || '';
 
     let transactions = data.transactions.filter(t => t.type === 'cashOut');
@@ -242,7 +247,7 @@ function renderCashOut() {
         html += `
             <tr>
                 <td>${formatDate(t.date)}</td>
-                <td><strong>#${t.pbNumber}</strong></td>
+                <td><button class="link-button" onclick="showCustomerHistory(${t.customerId})" title="View customer transaction history">#${t.pbNumber}</button></td>
                 <td>${escapeHtml(getCustomerName(t.customerId))}</td>
                 <td class="text-danger fw-600">GH₵ ${Number(t.amount).toFixed(2)}</td>
                 <td>${escapeHtml(t.issuedBy || '—')}</td>

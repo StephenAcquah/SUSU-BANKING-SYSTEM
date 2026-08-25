@@ -143,3 +143,25 @@ function resetAllData() {
     renderAll();
     showToast('All data has been reset.', 'warning');
 }
+
+function emailExportData() {
+    if (!requireManager()) return;
+    const rows = [['Date', 'Type', 'PB Number', 'Customer', 'Amount (GHS)', 'Staff']];
+    data.transactions.forEach(transaction => rows.push([
+        transaction.date,
+        transaction.type === 'cashIn' ? 'Cash In' : 'Cash Out',
+        transaction.pbNumber,
+        getCustomerName(transaction.customerId),
+        Number(transaction.amount).toFixed(2),
+        transaction.type === 'cashIn' ? transaction.receivedBy : transaction.issuedBy
+    ]));
+    const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = `f-emmanuel-85-transactions-${todayStr()}.csv`;
+    download.click();
+    URL.revokeObjectURL(url);
+    window.location.href = `mailto:?subject=${encodeURIComponent('F EMMANUEL 85 VENTURES transaction file')}&body=${encodeURIComponent('The transaction CSV has been downloaded. Please attach it to this email before sending it to the manager.')}`;
+    showToast('Transaction CSV downloaded. Attach it to the manager email.', 'success');
+}

@@ -37,6 +37,32 @@ function saveData() {
 let data = loadData();
 let nextId = getNextId();
 
+async function hydrateCloudData() {
+    if (!cloudReady() || !isAuthenticated()) return;
+    const customerQuery = supabaseClient.from('customers').select('id, name, next_of_kin, phone, created_at').order('name');
+    const transactionQuery = supabaseClient.from('transactions').select('id, date, type, pb_number, customer_id, amount, staff_id, created_at').order('date', { ascending: false });
+    const [{ data: customers, error: customerError }, { data: transactions, error: transactionError }] = await Promise.all([customerQuery, transactionQuery]);
+    if (customerError) throw customerError;
+    if (transactionError) throw transactionError;
+    data = {
+        customers: (customers || []).map(customer => ({ id: customer.id, name: customer.name, nextOfKin: customer.next_of_kin, phone: customer.phone, createdAt: customer.created_at })),
+        transactions: (transactions || []).map(transaction => ({ id: transaction.id, date: transaction.date, type: transaction.type, pbNumber: transaction.pb_number, customerId: transaction.customer_id, amount: Number(transaction.amount), staffId: transaction.staff_id, createdAt: transaction.created_at }))
+    };
+    nextId = getNextId();
+}
+
+async function cloudAddCustomer(customer) {
+    const { data: created, error } = await supabaseClient.from('customers').insert({ name: customer.name, next_of_kin: customer.nextOfKin, phone: customer.phone }).select('id, name, next_of_kin, phone, created_at').single();
+    if (error) throw error;
+    return { id: created.id, name: created.name, nextOfKin: created.next_of_kin, phone: created.phone, createdAt: created.created_at };
+}
+
+async function cloudAddTransaction(transaction) {
+    const { data: created, error } = await supabaseClient.rpc('record_transaction', { p_date: transaction.date, p_type: transaction.type, p_pb_number: transaction.pbNumber, p_customer_id: transaction.customerId, p_amount: transaction.amount });
+    if (error) throw error;
+    return { id: created.id, date: created.date, type: created.type, pbNumber: created.pb_number, customerId: created.customer_id, amount: Number(created.amount), staffId: created.staff_id, createdAt: created.created_at };
+}
+
 // Get next available ID
 function getNextId() {
     const allIds = [

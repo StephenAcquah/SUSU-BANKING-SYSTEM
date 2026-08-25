@@ -103,7 +103,7 @@ using (public.is_manager()) with check (public.is_manager());
 
 drop policy if exists customers_manager_read on public.customers;
 create policy customers_manager_read on public.customers for select to authenticated
-using (public.is_manager());
+using (exists (select 1 from public.profiles where id = auth.uid() and active = true));
 drop policy if exists customers_manager_write on public.customers;
 create policy customers_manager_write on public.customers for all to authenticated
 using (public.is_manager()) with check (public.is_manager());
@@ -163,6 +163,24 @@ end;
 $$;
 
 grant execute on function public.record_transaction(date, public.transaction_type, integer, bigint, numeric) to authenticated;
+
+create or replace function public.setup_first_manager(p_full_name text)
+returns public.profiles
+language plpgsql security definer set search_path = public
+as $$
+declare
+    result public.profiles;
+begin
+    if auth.uid() is null then raise exception 'Authentication required'; end if;
+    if exists (select 1 from public.profiles where role = 'manager') then raise exception 'A manager already exists'; end if;
+    insert into public.profiles(id, full_name, role, active)
+    values (auth.uid(), trim(p_full_name), 'manager', true)
+    returning * into result;
+    return result;
+end;
+$$;
+
+grant execute on function public.setup_first_manager(text) to authenticated;
 
 -- First manager setup is intentionally performed through Supabase Auth plus a protected setup flow.
 -- Do not make the first user a manager from an untrusted client in production.

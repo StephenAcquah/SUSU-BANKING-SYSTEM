@@ -22,10 +22,6 @@ The anon key may be used by the frontend only because Row Level Security is enab
 
 The repository now includes a server-side API in `server.js` and Vercel routing in `vercel.json`. Before deploying, install dependencies with `npm install`. In Vercel Project Settings > Environment Variables, add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CORS_ORIGIN`. Never commit the service-role key or put it in `js/`.
 
-## Testing
-
-Open `test-lab.html` for an isolated QA sandbox. It tests input escaping and documents the expected manager/staff access rules without authenticating or changing production data. Use fake values only, and delete this file before the public production launch.
-
 The existing browser interface still uses its local data adapter. The API foundation is ready, but the remaining integration is to replace the local adapter calls in `js/data.js`, `js/auth.js`, `js/customers.js`, and `js/transactions.js` with authenticated API calls. Do not enter real records until that frontend switch is complete.
 
 The login and role controls protect this browser workspace, but they are not a replacement for server-side security. Anyone with access to the computer and browser storage can potentially inspect or change local data. For production use, move authentication, authorization, and banking records to a secure backend with HTTPS, server-side password hashing, database backups, and an audit log.
@@ -37,6 +33,10 @@ The login and role controls protect this browser workspace, but they are not a r
 - Per-customer balance calculations and insufficient-balance protection
 - Daily and monthly reports
 - Search, date filters, responsive navigation, and JSON import/export
+- Clickable PB numbers open a customer's complete transaction history without deleting records
+- Manager CSV export that prepares a file for attachment in an email client
+
+The transaction email button downloads a CSV and opens a draft email on the current device. Automatic delivery to a fixed manager address requires a backend email provider and a configured manager email; no email password or API key belongs in the frontend.
 
 ## Recommended next features
 

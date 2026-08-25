@@ -100,14 +100,15 @@ function hideAuthScreen() {
 }
 
 function setAuthMode(mode) {
-    const setup = mode === 'setup';
+    const hasManager = authStore.users.some(user => user.role === 'manager');
+    const setup = mode === 'setup' && !hasManager;
     document.getElementById('authTitle').textContent = setup ? 'Create manager account' : 'Welcome back';
     document.getElementById('authSubtitle').textContent = setup
         ? 'Set up the first account for this F EMMANUEL 85 VENTURES workspace.'
         : 'Sign in to continue to your workspace.';
     document.getElementById('authSubmit').textContent = setup ? 'Create manager account' : 'Sign in';
     document.getElementById('authNameGroup').hidden = !setup;
-    document.getElementById('authSwitch').hidden = setup;
+    document.getElementById('authSwitch').hidden = setup || hasManager;
     document.getElementById('authMode').value = mode;
 }
 
@@ -126,6 +127,24 @@ async function submitAuth(event) {
 
     button.disabled = true;
     try {
+        if (cloudReady()) {
+            const email = username.includes('@') ? username : `${username}@femmanuel85.local`;
+            if (mode === 'setup') {
+                const { data: result, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) throw error;
+                const { data: profile, error: profileError } = await supabaseClient.rpc('setup_first_manager', { p_full_name: name });
+                if (profileError) throw profileError;
+                await setCloudSession(result.session, profile);
+                enterApp();
+                showToast('Manager account created.', 'success');
+            } else {
+                const { data: result, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                await loadCloudProfile(result.user);
+                enterApp();
+            }
+            return;
+        }
         const passwordHash = await hashPassword(password);
         if (mode === 'setup') {
             if (authStore.users.some(user => user.role === 'manager')) {
@@ -136,6 +155,7 @@ async function submitAuth(event) {
             const manager = { id: makeUserId(), name, username, passwordHash, role: 'manager', active: true, createdAt: todayStr() };
             authStore.users.push(manager);
             saveAuthStore();
+            document.getElementById('authSwitch').hidden = true;
             setSession(manager);
             enterApp();
             showToast('Manager account created.', 'success');
@@ -148,9 +168,21 @@ async function submitAuth(event) {
             setSession(user);
             enterApp();
         }
+    } catch (error) {
+        showAuthMessage(cloudReady() ? cloudError(error, 'Unable to sign in.') : 'Unable to sign in.');
     } finally {
         button.disabled = false;
     }
+}
+
+async function setCloudSession(session, profile) {
+    currentUser = { id: profile.id, name: profile.full_name, username: session?.user?.email || '', role: profile.role };
+}
+
+async function loadCloudProfile(user) {
+    const { data: profile, error } = await supabaseClient.from('profiles').select('id, full_name, role, active').eq('id', user.id).single();
+    if (error || !profile?.active) throw new Error('Your account is not active.');
+    await setCloudSession({ user }, profile);
 }
 
 function showAuthMessage(message) {
@@ -169,15 +201,22 @@ function togglePassword(inputId, button) {
     if (icon) icon.className = `fas fa-eye${isHidden ? '-slash' : ''}`;
 }
 
-function enterApp() {
+async function enterApp() {
     hideAuthScreen();
     applyRoleAccess();
     updateUserIdentity();
+    try {
+        await hydrateCloudData();
+    } catch (error) {
+        showAuthMessage(cloudError(error, 'Unable to load cloud data.'));
+        return;
+    }
     renderAll();
     navigate('dashboard');
 }
 
 function logout() {
+    if (cloudReady()) supabaseClient.auth.signOut();
     clearSession();
     document.querySelectorAll('.modal-overlay.open').forEach(modal => modal.classList.remove('open'));
     showAuthScreen('login');
@@ -268,6 +307,12 @@ function populateStaffDropdowns() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (isAuthenticated()) enterApp();
+    if (cloudReady()) {
+        supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user) {
+                try { await loadCloudProfile(session.user); await enterApp(); } catch (error) { showAuthScreen('login'); showAuthMessage(cloudError(error, 'Unable to load your account.')); }
+            } else showAuthScreen('login');
+        });
+    } else if (isAuthenticated()) enterApp();
     else showAuthScreen(authStore.users.some(user => user.role === 'manager') ? 'login' : 'setup');
 });

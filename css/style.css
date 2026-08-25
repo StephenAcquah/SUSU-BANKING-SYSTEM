@@ -1220,3 +1220,18 @@ table tbody tr:last-child td {
     color: var(--gray-500);
     font-size: 13px;
 }
+
+.link-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--info);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.link-button:hover { color: var(--primary); }
+
+.modal-wide { max-width: 760px; }

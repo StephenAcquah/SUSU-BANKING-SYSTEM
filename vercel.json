@@ -4,7 +4,7 @@
     "src": "server.js",
     "use": "@vercel/node",
     "config": {
-      "includeFiles": ["index.html", "test-lab.html", "css/**", "js/**"]
+          "includeFiles": ["index.html", "css/**", "js/**"]
     }
   }],
   "routes": [

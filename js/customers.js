@@ -23,7 +23,7 @@ function openCustomerModal(customerId) {
     openModal('customerModal');
 }
 
-function saveCustomer(e) {
+async function saveCustomer(e) {
     e.preventDefault();
     if (!requireManager()) return;
     const id = document.getElementById('customerEditId').value;
@@ -45,13 +45,17 @@ function saveCustomer(e) {
             showToast('Customer updated successfully.', 'success');
         }
     } else {
-        data.customers.push({
+        const customer = {
             id: genId(),
             name,
             nextOfKin,
             phone,
             createdAt: todayStr()
-        });
+        };
+        if (cloudReady()) {
+            try { data.customers.push(await cloudAddCustomer(customer)); }
+            catch (error) { showToast(cloudError(error, 'Unable to save customer.'), 'error'); return; }
+        } else data.customers.push(customer);
         showToast(`Customer "${name}" added.`, 'success');
     }
 
@@ -77,6 +81,7 @@ function deleteCustomer(id) {
 
 function renderCustomers() {
     const tbody = document.getElementById('customerTableBody');
+    if (!tbody) return;
     if (!tbody) return;
     
     const search = document.getElementById('customerSearch')?.value?.toLowerCase().trim() || '';
@@ -156,4 +161,14 @@ function populateCustomerDropdowns() {
             sel.value = currentVal;
         }
     });
+}
+
+function showCustomerHistory(customerId) {
+    const customer = data.customers.find(item => item.id === Number(customerId));
+    if (!customer) return;
+    const history = data.transactions.filter(item => item.customerId === Number(customerId)).sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.id - b.id);
+    const body = document.getElementById('customerHistoryBody');
+    document.getElementById('customerHistoryTitle').innerHTML = `<i class="fas fa-user-clock"></i> ${escapeHtml(customer.name)} <span class="text-muted fs-small">${escapeHtml(customer.phone || 'No phone')}</span>`;
+    body.innerHTML = history.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>PB#</th><th>Amount</th></tr></thead><tbody>${history.map(item => `<tr><td>${formatDate(item.date)}</td><td><span class="badge-status ${item.type === 'cashIn' ? 'in' : 'out'}">${item.type === 'cashIn' ? 'Cash In' : 'Cash Out'}</span></td><td>#${item.pbNumber}</td><td class="${item.type === 'cashIn' ? 'text-success' : 'text-danger'} fw-600">GH₵ ${Number(item.amount).toFixed(2)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty-state"><i class="fas fa-inbox"></i><h3>No transactions yet</h3><p>This customer has no transaction history.</p></div>';
+    openModal('customerHistoryModal');
 }
