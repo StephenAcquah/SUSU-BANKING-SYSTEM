@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    console.log('🏦 SUSU PINHIN v2.0 loaded');
+    console.log('🏦 F EMMANUEL 85 VENTURES v3.0 loaded');
     console.log(`📊 ${data.customers.length} customers, ${data.transactions.length} transactions`);
 });
 

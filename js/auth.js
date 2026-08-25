@@ -103,7 +103,7 @@ function setAuthMode(mode) {
     const setup = mode === 'setup';
     document.getElementById('authTitle').textContent = setup ? 'Create manager account' : 'Welcome back';
     document.getElementById('authSubtitle').textContent = setup
-        ? 'Set up the first account for this SUSU PINHIN workspace.'
+        ? 'Set up the first account for this F EMMANUEL 85 VENTURES workspace.'
         : 'Sign in to continue to your workspace.';
     document.getElementById('authSubmit').textContent = setup ? 'Create manager account' : 'Sign in';
     document.getElementById('authNameGroup').hidden = !setup;
