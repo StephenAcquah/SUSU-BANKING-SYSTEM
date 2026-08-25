@@ -42,11 +42,9 @@ async function saveCashIn(e) {
     if (id) {
         const existing = data.transactions.find(t => t.id === Number(id));
         if (existing) {
-            existing.date = date;
-            existing.pbNumber = Number(pbNumber);
-            existing.customerId = customerId;
-            existing.amount = amount;
-            existing.receivedBy = receivedBy;
+            const values = { ...existing, date, pbNumber: Number(pbNumber), customerId, amount, receivedBy };
+            const updated = cloudReady() ? await cloudUpdateTransaction(existing.id, values) : values;
+            data.transactions[data.transactions.indexOf(existing)] = updated;
             showToast('Cash In updated.', 'success');
         }
     } else {
@@ -74,6 +72,7 @@ async function saveCashIn(e) {
 }
 
 function renderCashIn() {
+    const tbody = document.getElementById('cashinTableBody');
     if (!tbody) return;
     
     const filterDate = document.getElementById('cashinFilterDate')?.value || '';
@@ -182,11 +181,9 @@ async function saveCashOut(e) {
     if (id) {
         const existing = data.transactions.find(t => t.id === Number(id));
         if (existing) {
-            existing.date = date;
-            existing.pbNumber = Number(pbNumber);
-            existing.customerId = customerId;
-            existing.amount = amount;
-            existing.issuedBy = issuedBy;
+            const values = { ...existing, date, pbNumber: Number(pbNumber), customerId, amount, issuedBy };
+            const updated = cloudReady() ? await cloudUpdateTransaction(existing.id, values) : values;
+            data.transactions[data.transactions.indexOf(existing)] = updated;
             showToast('Cash Out updated.', 'success');
         }
     } else {
@@ -276,7 +273,7 @@ function renderCashOut() {
 // DELETE TRANSACTION
 // ============================================================
 
-function deleteTransaction(id, type) {
+async function deleteTransaction(id, type) {
     if (!isManager()) {
         showToast('Only the manager can delete transaction records.', 'error');
         return;
@@ -284,7 +281,13 @@ function deleteTransaction(id, type) {
     const t = data.transactions.find(t => t.id === id);
     if (!t) return;
     if (!confirm(`Delete this ${type === 'cashIn' ? 'Cash In' : 'Cash Out'} record?`)) return;
-    data.transactions = data.transactions.filter(t => t.id !== id);
+    try {
+        if (cloudReady()) await cloudDeleteTransaction(id);
+        data.transactions = data.transactions.filter(t => t.id !== id);
+    } catch (error) {
+        showToast(cloudError(error, 'Unable to delete transaction.'), 'error');
+        return;
+    }
     saveData();
     if (type === 'cashIn') renderCashIn();
     else renderCashOut();

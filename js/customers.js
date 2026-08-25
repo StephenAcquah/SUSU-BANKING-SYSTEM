@@ -39,9 +39,10 @@ async function saveCustomer(e) {
     if (id) {
         const existing = data.customers.find(c => c.id === Number(id));
         if (existing) {
-            existing.name = name;
-            existing.nextOfKin = nextOfKin;
-            existing.phone = phone;
+            const updated = cloudReady()
+                ? await cloudUpdateCustomer(existing.id, { name, nextOfKin, phone })
+                : { ...existing, name, nextOfKin, phone };
+            data.customers[data.customers.indexOf(existing)] = updated;
             showToast('Customer updated successfully.', 'success');
         }
     } else {
@@ -66,12 +67,18 @@ async function saveCustomer(e) {
     populateCustomerDropdowns();
 }
 
-function deleteCustomer(id) {
+async function deleteCustomer(id) {
     if (!requireManager()) return;
     const c = data.customers.find(c => c.id === id);
     if (!c) return;
     if (!confirm(`Delete customer "${c.name}"? This will NOT delete their transactions.`)) return;
-    data.customers = data.customers.filter(c => c.id !== id);
+    try {
+        if (cloudReady()) await cloudDeleteCustomer(id);
+        data.customers = data.customers.filter(c => c.id !== id);
+    } catch (error) {
+        showToast(cloudError(error, 'Unable to delete customer.'), 'error');
+        return;
+    }
     saveData();
     renderCustomers();
     updateDashboard();

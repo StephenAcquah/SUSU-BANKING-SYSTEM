@@ -111,14 +111,22 @@ function importData() {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(ev) {
+        reader.onload = async function(ev) {
             try {
                 const imported = JSON.parse(ev.target.result);
                 if (imported.customers && imported.transactions) {
                     if (!confirm('This will replace ALL current data. Continue?')) return;
-                    data = imported;
-                    nextId = getNextId();
-                    saveData();
+                    try {
+                        if (cloudReady()) await cloudReplaceData(imported);
+                        else {
+                            data = imported;
+                            nextId = getNextId();
+                            saveData();
+                        }
+                    } catch (error) {
+                        showToast(cloudError(error, 'Unable to import data.'), 'error');
+                        return;
+                    }
                     renderAll();
                     showToast('Data imported successfully.', 'success');
                 } else {
@@ -133,13 +141,21 @@ function importData() {
     input.click();
 }
 
-function resetAllData() {
+async function resetAllData() {
     if (!requireManager()) return;
     if (!confirm('⚠️ Are you sure you want to delete ALL data? This cannot be undone.')) return;
     if (!confirm('Type "yes" to confirm.')) return;
-    data = getDefaultData();
-    nextId = 1;
-    saveData();
+    try {
+        if (cloudReady()) await cloudResetData();
+        else {
+            data = getDefaultData();
+            nextId = 1;
+            saveData();
+        }
+    } catch (error) {
+        showToast(cloudError(error, 'Unable to reset data.'), 'error');
+        return;
+    }
     renderAll();
     showToast('All data has been reset.', 'warning');
 }

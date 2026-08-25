@@ -1,11 +1,12 @@
 // ============================================================
-// AUTHENTICATION - Local role-based access for the browser app
+// AUTHENTICATION - Supabase Auth with a local-only fallback
 // ============================================================
 
 const AUTH_STORAGE_KEY = 'susu_pinhin_auth';
 const SESSION_STORAGE_KEY = 'susu_pinhin_session';
 let authStore = loadAuthStore();
 let currentUser = loadSession();
+let cloudStaffUsers = [];
 
 function loadAuthStore() {
     try {
@@ -78,11 +79,19 @@ function requireManager() {
 }
 
 function getStaffUsers() {
-    return authStore.users.filter(user => user.role === 'staff' && user.active !== false);
+    const users = cloudReady() ? cloudStaffUsers : authStore.users;
+    return users.filter(user => user.role === 'staff' && user.active !== false);
 }
 
 function getAllStaffUsers() {
-    return authStore.users.filter(user => user.role === 'staff');
+    const users = cloudReady() ? cloudStaffUsers : authStore.users;
+    return users.filter(user => user.role === 'staff');
+}
+
+async function loadCloudStaff() {
+    const { data: profiles, error } = await supabaseClient.from('profiles').select('id, full_name, role, active').eq('role', 'staff').order('full_name');
+    if (error) throw error;
+    cloudStaffUsers = (profiles || []).map(profile => ({ id: profile.id, name: profile.full_name, username: '', role: profile.role, active: profile.active }));
 }
 
 function showAuthScreen(mode) {
@@ -207,6 +216,7 @@ async function enterApp() {
     updateUserIdentity();
     try {
         await hydrateCloudData();
+        if (cloudReady() && isManager()) await loadCloudStaff();
     } catch (error) {
         showAuthMessage(cloudError(error, 'Unable to load cloud data.'));
         return;
@@ -240,14 +250,33 @@ function applyRoleAccess() {
     staffOnly.forEach(element => { element.hidden = isManager(); });
 }
 
-function addStaff(event) {
+async function addStaff(event) {
     event.preventDefault();
     if (!requireManager()) return;
     const name = document.getElementById('staffName').value.trim();
     const username = document.getElementById('staffUsername').value.trim().toLowerCase();
     const password = document.getElementById('staffPassword').value;
-    if (!name || !username || password.length < 6) {
-        showToast('Enter a name, username, and password of at least 6 characters.', 'error');
+    if (!name || !username || password.length < 10) {
+        showToast('Enter a name, username, and password of at least 10 characters.', 'error');
+        return;
+    }
+    if (cloudReady()) {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const response = await fetch('/api/staff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ name, email: username.includes('@') ? username : `${username}@femmanuel85.local`, password })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Unable to create staff account.');
+            await loadCloudStaff();
+            event.target.reset();
+            renderStaff();
+            populateStaffDropdowns();
+            closeModal('staffModal');
+            showToast(`Staff account for ${name} created.`, 'success');
+        } catch (error) { showToast(cloudError(error, 'Unable to create staff account.'), 'error'); }
         return;
     }
     if (authStore.users.some(user => user.username === username)) {
@@ -265,11 +294,21 @@ function addStaff(event) {
     });
 }
 
-function removeStaff(id) {
+async function removeStaff(id) {
     if (!requireManager()) return;
     const staff = authStore.users.find(user => user.id === id && user.role === 'staff');
     if (!staff || !confirm(`Remove staff access for ${staff.name}?`)) return;
-    staff.active = false;
+    if (cloudReady()) {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const response = await fetch(`/api/staff/${encodeURIComponent(id)}/remove`, { method: 'PATCH', headers: { Authorization: `Bearer ${session.access_token}` } });
+            const result = response.status === 204 ? null : await response.json();
+            if (!response.ok) throw new Error(result?.error || 'Unable to remove staff account.');
+            await loadCloudStaff();
+        } catch (error) { showToast(cloudError(error, 'Unable to remove staff account.'), 'error'); return; }
+    } else {
+        staff.active = false;
+    }
     saveAuthStore();
     renderStaff();
     populateStaffDropdowns();
@@ -306,7 +345,8 @@ function populateStaffDropdowns() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializeCloud();
     if (cloudReady()) {
         supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user) {

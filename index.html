@@ -29,7 +29,7 @@
                 <button class="btn btn-accent w-full" id="authSubmit" type="submit">Sign in</button>
             </form>
             <button class="auth-switch" id="authSwitch" type="button" onclick="setAuthMode('setup')" hidden>Set up the first manager account</button>
-            <small class="auth-note">This local workspace stores accounts in this browser.</small>
+            <small class="auth-note">Accounts and records are secured in Supabase.</small>
         </div>
     </section>
 
@@ -519,7 +519,7 @@
 
     <div class="modal-overlay" id="staffModal">
         <div class="modal"><div class="modal-header"><h3><i class="fas fa-user-plus"></i> Add Staff Member</h3><button class="modal-close" onclick="closeModal('staffModal')">&times;</button></div>
-            <div class="modal-body"><form onsubmit="addStaff(event)"><div class="form-group"><label for="staffName">Full name <span class="required">*</span></label><input id="staffName" class="form-control" required /></div><div class="form-group"><label for="staffUsername">Username <span class="required">*</span></label><input id="staffUsername" class="form-control" autocomplete="username" required /></div><div class="form-group"><label for="staffPassword">Temporary password <span class="required">*</span></label><div class="password-field"><input id="staffPassword" type="password" class="form-control" minlength="6" required /><button type="button" class="password-toggle" onclick="togglePassword('staffPassword', this)" aria-label="Show password" title="Show password"><i class="fas fa-eye"></i></button></div></div><div class="modal-footer" style="padding:16px 0 0;border-top:none;"><button type="button" class="btn btn-outline" onclick="closeModal('staffModal')">Cancel</button><button type="submit" class="btn btn-accent"><i class="fas fa-save"></i> Create staff</button></div></form></div>
+            <div class="modal-body"><form onsubmit="addStaff(event)"><div class="form-group"><label for="staffName">Full name <span class="required">*</span></label><input id="staffName" class="form-control" required /></div><div class="form-group"><label for="staffUsername">Username <span class="required">*</span></label><input id="staffUsername" class="form-control" autocomplete="username" required /></div><div class="form-group"><label for="staffPassword">Temporary password <span class="required">*</span></label><div class="password-field"><input id="staffPassword" type="password" class="form-control" minlength="10" required /><button type="button" class="password-toggle" onclick="togglePassword('staffPassword', this)" aria-label="Show password" title="Show password"><i class="fas fa-eye"></i></button></div></div><div class="modal-footer" style="padding:16px 0 0;border-top:none;"><button type="button" class="btn btn-outline" onclick="closeModal('staffModal')">Cancel</button><button type="submit" class="btn btn-accent"><i class="fas fa-save"></i> Create staff</button></div></form></div>
         </div>
     </div>
 

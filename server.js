@@ -9,7 +9,8 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !serviceRoleKey) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
+const anonKey = process.env.SUPABASE_ANON_KEY;
+if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error('SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are required.');
 const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -33,6 +34,7 @@ function managerOnly(req, res, next) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/config', (_req, res) => res.json({ supabaseUrl, supabaseAnonKey: anonKey }));
 
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
