@@ -34,6 +34,8 @@ function managerOnly(req, res, next) {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
 app.post('/api/staff', requireUser, managerOnly, async (req, res) => {
     const { name, email, password } = req.body || {};
     if (!name?.trim() || !email?.trim() || typeof password !== 'string' || password.length < 10) return res.status(400).json({ error: 'Name, email, and a password of at least 10 characters are required.' });
@@ -58,4 +60,9 @@ app.patch('/api/staff/:id/remove', requireUser, managerOnly, async (req, res) =>
 });
 
 app.use(express.static(__dirname));
-app.listen(port, () => console.log(`F EMMANUEL 85 VENTURES server running at http://localhost:${port}`));
+
+if (require.main === module) {
+    app.listen(port, () => console.log(`F EMMANUEL 85 VENTURES server running at http://localhost:${port}`));
+}
+
+module.exports = app;

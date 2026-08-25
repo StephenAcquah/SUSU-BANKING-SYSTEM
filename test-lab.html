@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>F EMMANUEL 85 VENTURES | Test Lab</title>
+    <style>
+        :root { font-family: system-ui, sans-serif; color: #172033; background: #eef2f7; }
+        body { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+        header, section { background: white; border: 1px solid #d8e0ea; border-radius: 10px; padding: 24px; margin-bottom: 18px; }
+        h1, h2 { margin-top: 0; } h1 { color: #0f172a; } h2 { font-size: 18px; }
+        .warning { border-left: 4px solid #dc2626; background: #fff7ed; }
+        label { display: block; margin: 12px 0 5px; font-weight: 650; }
+        input, textarea, button { font: inherit; } input, textarea { width: 100%; padding: 10px; border: 1px solid #b8c4d3; border-radius: 6px; box-sizing: border-box; }
+        textarea { min-height: 90px; } button { margin-top: 14px; padding: 10px 16px; border: 0; border-radius: 6px; background: #d97706; color: white; cursor: pointer; font-weight: 700; }
+        code, pre { background: #f1f5f9; padding: 3px 5px; border-radius: 4px; } pre { padding: 14px; overflow: auto; }
+        .pass { color: #047857; } .fail { color: #b91c1c; } .muted { color: #64748b; }
+    </style>
+</head>
+<body>
+    <header>
+        <p class="muted">F EMMANUEL 85 VENTURES / QA</p>
+        <h1>Security Test Lab</h1>
+        <p>Use this isolated page to test input handling with fake values. It does not log in, write to Supabase, or modify banking records.</p>
+    </header>
+    <section class="warning">
+        <h2>Sandbox only</h2>
+        <p>Never use real customer names, passwords, phone numbers, or financial records here. Delete this file before a public production launch.</p>
+    </section>
+    <section>
+        <h2>Input safety probe</h2>
+        <label for="probeInput">Test value</label>
+        <input id="probeInput" placeholder="Try harmless test strings, including HTML-like text">
+        <button type="button" id="runProbe">Run escaped preview</button>
+        <p id="probeResult" class="muted">No test run yet.</p>
+        <pre id="probeOutput"></pre>
+    </section>
+    <section>
+        <h2>Expected access rules</h2>
+        <ul>
+            <li>Unauthenticated users: login screen only.</li>
+            <li>Staff: Dashboard, Cash In, and Cash Out only.</li>
+            <li>Manager: staff, customer, balance, report, import, export, and reset controls.</li>
+            <li>Staff attribution: selected from managed staff, never arbitrary free text.</li>
+        </ul>
+        <button type="button" id="runChecks">Run local checks</button>
+        <div id="checkResults"></div>
+    </section>
+    <script>
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        document.getElementById('runProbe').addEventListener('click', function () {
+            const value = document.getElementById('probeInput').value;
+            document.getElementById('probeOutput').textContent = escapeHtml(value);
+            document.getElementById('probeResult').textContent = 'Rendered as text. It was not executed as HTML.';
+            document.getElementById('probeResult').className = 'pass';
+        });
+
+        document.getElementById('runChecks').addEventListener('click', function () {
+            const checks = [
+                ['Test page is isolated from production storage', !localStorage.getItem('susu_pinhin_data')],
+                ['HTML escaping converts angle brackets', escapeHtml('<b>test</b>') === '&lt;b&gt;test&lt;/b&gt;'],
+                ['HTML escaping converts quotes', escapeHtml('"test"') === '&quot;test&quot;']
+            ];
+            document.getElementById('checkResults').innerHTML = checks.map(([label, passed]) => `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}: ${label}</p>`).join('');
+        });
+    </script>
+</body>
+</html>
