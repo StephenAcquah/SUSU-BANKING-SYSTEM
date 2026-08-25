@@ -158,6 +158,17 @@ function showAuthMessage(message) {
     if (messageEl) messageEl.textContent = message;
 }
 
+function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    button.setAttribute('title', isHidden ? 'Hide password' : 'Show password');
+    const icon = button.querySelector('i');
+    if (icon) icon.className = `fas fa-eye${isHidden ? '-slash' : ''}`;
+}
+
 function enterApp() {
     hideAuthScreen();
     applyRoleAccess();
